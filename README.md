@@ -1,36 +1,103 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Event Poster - Multi-Platform Event Publisher
+
+A Next.js application that allows you to post events to Meetup and Eventbrite simultaneously using your own API keys.
+
+## Features
+
+- 📅 **Single Form Submission**: Create events on multiple platforms with one form
+- 🔐 **Secure API Key Handling**: API keys are never stored, only used for the current request
+- 📸 **Photo Upload**: Support for event images with preview
+- ⏰ **Date/Time Picker**: Intuitive date and time selection using shadcn components
+- ✅ **Form Validation**: Comprehensive validation with Zod
+- 🔄 **Server Actions**: Uses Next.js 15 server actions for secure API communication
+- 📱 **Responsive Design**: Works on desktop and mobile devices
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18+ installed
+- API keys for the platforms you want to use:
+  - **Meetup**: OAuth token and group URL name
+  - **Eventbrite**: Private token and organization ID
+
+### Installation
+
+1. Install dependencies:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Run the development server:
+```bash
+npm run dev
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## How to Use
 
-## Learn More
+### Getting Your API Keys
 
-To learn more about Next.js, take a look at the following resources:
+#### Meetup
+1. You need a Meetup Pro subscription to create OAuth consumers
+2. Visit [Meetup OAuth Clients](https://www.meetup.com/api/oauth/list/)
+3. Create a new OAuth client
+4. Use the OAuth token for posting events
+5. Find your group's URL name (e.g., "tech-meetup-sf" from meetup.com/tech-meetup-sf)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+#### Eventbrite
+1. Go to [Eventbrite Account Settings](https://www.eventbrite.com/account-settings/)
+2. Navigate to Developer Links → API Keys
+3. Create an API key
+4. Copy your Private Token
+5. Find your Organization ID in your Eventbrite account settings
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Posting Events
 
-## Deploy on Vercel
+1. Fill in the event details:
+   - Event title (required)
+   - Description (required, min 10 characters)
+   - Start date and time (required)
+   - End date and time (required)
+   - Venue/location (optional)
+   - Event photo (optional, max 10MB)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. Enter your API credentials:
+   - For Meetup: Enter your OAuth token and group URL name
+   - For Eventbrite: Enter your private token and organization ID
+   - You can use one or both platforms
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. Click "Post Event" to submit to the selected platforms
+
+## Security Notes
+
+- **API Keys**: Your API keys are never stored or logged. They are only used in server-side actions for the current request.
+- **Server Actions**: All API communication happens server-side using Next.js server actions, keeping your credentials secure.
+- **HTTPS Only**: Always use HTTPS in production to ensure secure transmission of API keys.
+
+## Tech Stack
+
+- **Framework**: Next.js 15 with App Router
+- **UI Components**: shadcn/ui
+- **Styling**: Tailwind CSS
+- **Form Handling**: React Hook Form
+- **Validation**: Zod
+- **Date Handling**: date-fns
+- **Icons**: Lucide React
+
+## Development
+
+```bash
+# Run development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
+
+# Run linting
+npm run lint
+```

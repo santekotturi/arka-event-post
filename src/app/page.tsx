@@ -1,103 +1,344 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { eventFormSchema, type EventFormData } from "@/lib/validations";
+import { createMeetupEvent } from "@/app/actions/meetup";
+import { createEventbriteEvent } from "@/app/actions/eventbrite";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DateTimePicker } from "@/components/date-time-picker";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2, Upload, Eye, EyeOff } from "lucide-react";
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [showMeetupKey, setShowMeetupKey] = useState(false);
+  const [showEventbriteKey, setShowEventbriteKey] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    watch,
+    reset
+  } = useForm<EventFormData>({
+    resolver: zodResolver(eventFormSchema),
+  });
+
+  const startDateTime = watch("startDateTime");
+  const endDateTime = watch("endDateTime");
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Please select an image under 10MB",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string);
+        setValue("photo", reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const onSubmit = async (data: EventFormData) => {
+    setIsSubmitting(true);
+    const results = [];
+
+    try {
+      // Post to Meetup if API key is provided
+      if (data.meetupApiKey && data.meetupGroupUrlname) {
+        const meetupResult = await createMeetupEvent({
+          title: data.title,
+          description: data.description,
+          startDateTime: data.startDateTime,
+          endDateTime: data.endDateTime,
+          venue: data.venue,
+          photo: data.photo,
+          apiKey: data.meetupApiKey,
+          groupUrlname: data.meetupGroupUrlname,
+        });
+
+        if (meetupResult.success) {
+          toast({
+            title: "Meetup Event Created",
+            description: `Event posted successfully! ${meetupResult.eventUrl ? `View at: ${meetupResult.eventUrl}` : ''}`,
+          });
+        } else {
+          toast({
+            title: "Meetup Error",
+            description: meetupResult.error || "Failed to create Meetup event",
+            variant: "destructive",
+          });
+        }
+        results.push(meetupResult);
+      }
+
+      // Post to Eventbrite if API key is provided
+      if (data.eventbriteApiKey && data.eventbriteOrgId) {
+        const eventbriteResult = await createEventbriteEvent({
+          title: data.title,
+          description: data.description,
+          startDateTime: data.startDateTime,
+          endDateTime: data.endDateTime,
+          venue: data.venue,
+          photo: data.photo,
+          apiKey: data.eventbriteApiKey,
+          organizationId: data.eventbriteOrgId,
+        });
+
+        if (eventbriteResult.success) {
+          toast({
+            title: "Eventbrite Event Created",
+            description: `Event posted successfully! ${eventbriteResult.eventUrl ? `View at: ${eventbriteResult.eventUrl}` : ''}`,
+          });
+        } else {
+          toast({
+            title: "Eventbrite Error",
+            description: eventbriteResult.error || "Failed to create Eventbrite event",
+            variant: "destructive",
+          });
+        }
+        results.push(eventbriteResult);
+      }
+
+      if (results.length === 0) {
+        toast({
+          title: "No API Keys Provided",
+          description: "Please provide at least one API key to post events",
+          variant: "destructive",
+        });
+      } else if (results.some(r => r.success)) {
+        // Clear form if at least one was successful
+        reset();
+        setPhotoPreview(null);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <main className="container mx-auto py-8 px-4 max-w-4xl">
+      <Card>
+        <CardHeader>
+          <CardTitle>Post Event to Multiple Platforms</CardTitle>
+          <CardDescription>
+            Create and post your event to Meetup and Eventbrite simultaneously
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Event Details Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Event Details</h3>
+              
+              <div className="space-y-2">
+                <Label htmlFor="title">Event Title *</Label>
+                <Input
+                  id="title"
+                  placeholder="Enter event title"
+                  {...register("title")}
+                />
+                {errors.title && (
+                  <p className="text-sm text-destructive">{errors.title.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description *</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Describe your event..."
+                  rows={5}
+                  {...register("description")}
+                />
+                {errors.description && (
+                  <p className="text-sm text-destructive">{errors.description.message}</p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Start Date & Time *</Label>
+                  <DateTimePicker
+                    date={startDateTime}
+                    setDate={(date) => setValue("startDateTime", date as Date)}
+                    placeholder="Select start date and time"
+                  />
+                  {errors.startDateTime && (
+                    <p className="text-sm text-destructive">{errors.startDateTime.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>End Date & Time *</Label>
+                  <DateTimePicker
+                    date={endDateTime}
+                    setDate={(date) => setValue("endDateTime", date as Date)}
+                    placeholder="Select end date and time"
+                  />
+                  {errors.endDateTime && (
+                    <p className="text-sm text-destructive">{errors.endDateTime.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="venue">Venue/Location</Label>
+                <Input
+                  id="venue"
+                  placeholder="Enter venue or address (optional)"
+                  {...register("venue")}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="photo">Event Photo</Label>
+                <div className="flex items-center gap-4">
+                  <Input
+                    id="photo"
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoChange}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => document.getElementById("photo")?.click()}
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload Photo
+                  </Button>
+                  {photoPreview && (
+                    <img
+                      src={photoPreview}
+                      alt="Event preview"
+                      className="h-20 w-20 object-cover rounded"
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* API Keys Section */}
+            <div className="space-y-4 border-t pt-6">
+              <h3 className="text-lg font-semibold">Platform API Keys</h3>
+              <p className="text-sm text-muted-foreground">
+                Enter your API keys to post to each platform. Keys are never stored and only used for this request.
+              </p>
+
+              {/* Meetup */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Meetup</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="meetupApiKey">API Key (OAuth Token)</Label>
+                    <div className="relative">
+                      <Input
+                        id="meetupApiKey"
+                        type={showMeetupKey ? "text" : "password"}
+                        placeholder="Enter your Meetup OAuth token"
+                        {...register("meetupApiKey")}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3"
+                        onClick={() => setShowMeetupKey(!showMeetupKey)}
+                      >
+                        {showMeetupKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="meetupGroupUrlname">Group URL Name</Label>
+                    <Input
+                      id="meetupGroupUrlname"
+                      placeholder="e.g., tech-meetup-sf"
+                      {...register("meetupGroupUrlname")}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Eventbrite */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Eventbrite</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="eventbriteApiKey">Private Token</Label>
+                    <div className="relative">
+                      <Input
+                        id="eventbriteApiKey"
+                        type={showEventbriteKey ? "text" : "password"}
+                        placeholder="Enter your Eventbrite private token"
+                        {...register("eventbriteApiKey")}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3"
+                        onClick={() => setShowEventbriteKey(!showEventbriteKey)}
+                      >
+                        {showEventbriteKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="eventbriteOrgId">Organization ID</Label>
+                    <Input
+                      id="eventbriteOrgId"
+                      placeholder="e.g., 123456789"
+                      {...register("eventbriteOrgId")}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Posting Event...
+                </>
+              ) : (
+                "Post Event"
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </main>
   );
 }
