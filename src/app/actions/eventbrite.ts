@@ -1,5 +1,7 @@
 'use server';
 
+import { isAuthenticated } from './auth';
+
 export interface EventbriteEventData {
   title: string;
   description: string;
@@ -7,8 +9,6 @@ export interface EventbriteEventData {
   endDateTime: Date;
   venue?: string;
   photo?: string;
-  apiKey: string;
-  organizationId: string;
 }
 
 export interface EventbriteResponse {
@@ -21,24 +21,36 @@ export interface EventbriteResponse {
 
 export async function createEventbriteEvent(data: EventbriteEventData): Promise<EventbriteResponse> {
   try {
-    if (!data.apiKey) {
+    // Check authentication
+    if (!(await isAuthenticated())) {
       return {
         success: false,
-        message: 'Eventbrite API key is required',
-        error: 'Missing API key'
+        message: 'Authentication required',
+        error: 'Not authenticated'
       };
     }
 
-    if (!data.organizationId) {
+    const apiKey = process.env.EVENTBRITE_API_KEY;
+    const organizationId = process.env.EVENTBRITE_ORG_ID;
+
+    if (!apiKey) {
       return {
         success: false,
-        message: 'Eventbrite organization ID is required',
-        error: 'Missing organization ID'
+        message: 'Eventbrite API key not configured',
+        error: 'Missing API key in environment'
+      };
+    }
+
+    if (!organizationId) {
+      return {
+        success: false,
+        message: 'Eventbrite organization ID not configured',
+        error: 'Missing organization ID in environment'
       };
     }
 
     // Step 1: Create draft event
-    const eventEndpoint = `https://www.eventbriteapi.com/v3/organizations/${data.organizationId}/events/`;
+    const eventEndpoint = `https://www.eventbriteapi.com/v3/organizations/${organizationId}/events/`;
     
     const eventPayload = {
       event: {
@@ -66,7 +78,7 @@ export async function createEventbriteEvent(data: EventbriteEventData): Promise<
     const eventResponse = await fetch(eventEndpoint, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${data.apiKey}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(eventPayload)
@@ -100,7 +112,7 @@ export async function createEventbriteEvent(data: EventbriteEventData): Promise<
     const ticketResponse = await fetch(ticketEndpoint, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${data.apiKey}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(ticketPayload)
@@ -116,7 +128,7 @@ export async function createEventbriteEvent(data: EventbriteEventData): Promise<
     const publishResponse = await fetch(publishEndpoint, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${data.apiKey}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       }
     });

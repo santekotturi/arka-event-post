@@ -1,5 +1,7 @@
 'use server';
 
+import { isAuthenticated } from './auth';
+
 export interface MeetupEventData {
   title: string;
   description: string;
@@ -7,8 +9,6 @@ export interface MeetupEventData {
   endDateTime: Date;
   venue?: string;
   photo?: string;
-  apiKey: string;
-  groupUrlname: string;
 }
 
 export interface MeetupResponse {
@@ -21,19 +21,31 @@ export interface MeetupResponse {
 
 export async function createMeetupEvent(data: MeetupEventData): Promise<MeetupResponse> {
   try {
-    if (!data.apiKey) {
+    // Check authentication
+    if (!(await isAuthenticated())) {
       return {
         success: false,
-        message: 'Meetup API key is required',
-        error: 'Missing API key'
+        message: 'Authentication required',
+        error: 'Not authenticated'
       };
     }
 
-    if (!data.groupUrlname) {
+    const apiKey = process.env.MEETUP_API_KEY;
+    const groupUrlname = process.env.MEETUP_GROUP_URLNAME;
+
+    if (!apiKey) {
       return {
         success: false,
-        message: 'Meetup group URL name is required',
-        error: 'Missing group URL name'
+        message: 'Meetup API key not configured',
+        error: 'Missing API key in environment'
+      };
+    }
+
+    if (!groupUrlname) {
+      return {
+        success: false,
+        message: 'Meetup group URL name not configured',
+        error: 'Missing group URL name in environment'
       };
     }
 
@@ -59,7 +71,7 @@ export async function createMeetupEvent(data: MeetupEventData): Promise<MeetupRe
 
     const variables = {
       input: {
-        groupUrlname: data.groupUrlname,
+        groupUrlname: groupUrlname,
         title: data.title,
         description: data.description,
         startDateTime: data.startDateTime.toISOString(),
@@ -77,7 +89,7 @@ export async function createMeetupEvent(data: MeetupEventData): Promise<MeetupRe
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${data.apiKey}`,
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         query: mutation,

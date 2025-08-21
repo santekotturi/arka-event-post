@@ -11,14 +11,6 @@ export const eventFormSchema = z.object({
   }),
   venue: z.string().optional(),
   photo: z.any().optional(),
-  
-  // Meetup fields
-  meetupApiKey: z.string().optional(),
-  meetupGroupUrlname: z.string().optional(),
-  
-  // Eventbrite fields
-  eventbriteApiKey: z.string().optional(),
-  eventbriteOrgId: z.string().optional(),
 }).refine((data) => data.endDateTime > data.startDateTime, {
   message: 'End date must be after start date',
   path: ['endDateTime'],
