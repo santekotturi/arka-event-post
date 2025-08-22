@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DateTimePicker } from "@/components/date-time-picker";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Upload, LogOut, CheckCircle2, Wifi } from "lucide-react";
+import Image from "next/image";
 
 export default function DashboardPage() {
   const { toast } = useToast();
@@ -34,8 +35,7 @@ export default function DashboardPage() {
     handleSubmit,
     formState: { errors },
     setValue,
-    watch,
-    reset
+    watch
   } = useForm<EventFormData>({
     resolver: zodResolver(eventFormSchema),
   });
@@ -94,7 +94,7 @@ export default function DashboardPage() {
                 </a>
               )}
             </div>
-          ) as any,
+          ) as React.ReactNode,
         });
       } else {
         toast({
@@ -103,7 +103,7 @@ export default function DashboardPage() {
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "An unexpected error occurred with Meetup",
@@ -144,7 +144,7 @@ export default function DashboardPage() {
                 </a>
               )}
             </div>
-          ) as any,
+          ) as React.ReactNode,
         });
       } else {
         toast({
@@ -153,7 +153,7 @@ export default function DashboardPage() {
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "An unexpected error occurred with Eventbrite",
@@ -186,7 +186,7 @@ export default function DashboardPage() {
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch {
       setMeetupConnected(false);
       toast({
         title: "Error",
@@ -216,7 +216,7 @@ export default function DashboardPage() {
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch {
       setEventbriteConnected(false);
       toast({
         title: "Error",
@@ -385,9 +385,11 @@ export default function DashboardPage() {
                     Upload Photo
                   </Button>
                   {photoPreview && (
-                    <img
+                    <Image
                       src={photoPreview}
                       alt="Event preview"
+                      width={80}
+                      height={80}
                       className="h-20 w-20 object-cover rounded"
                     />
                   )}

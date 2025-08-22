@@ -20,7 +20,7 @@ export async function middleware(request: NextRequest) {
     try {
       await jwtVerify(token.value, secret);
       return NextResponse.next();
-    } catch (error) {
+    } catch {
       // Invalid token, redirect to login
       return NextResponse.redirect(new URL('/login', request.url));
     }
